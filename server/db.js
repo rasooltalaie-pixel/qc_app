@@ -1,6 +1,5 @@
 // =====================================================
-// QC APP DATABASE v0.2
-// Redesigned Database
+// QC APP Database v1.0
 // =====================================================
 
 const { DatabaseSync } = require("node:sqlite");
@@ -8,24 +7,29 @@ const path = require("path");
 const fs = require("fs");
 
 const DATA_DIR =
-  process.env.DATA_DIR || path.join(__dirname, "data");
+process.env.DATA_DIR ||
+path.join(__dirname,"data");
 
-if (!fs.existsSync(DATA_DIR))
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+if(!fs.existsSync(DATA_DIR)){
 
-const DB_PATH = path.join(DATA_DIR, "qc.db");
+fs.mkdirSync(DATA_DIR,{
+recursive:true
+});
 
-const db = new DatabaseSync(DB_PATH);
+}
 
-db.exec("PRAGMA journal_mode = WAL;");
-db.exec("PRAGMA foreign_keys = ON;");
+const DB_PATH=path.join(
+DATA_DIR,
+"qc.db"
+);
 
-db.exec(`
+const db=new DatabaseSync(DB_PATH);
 
-----------------------------------------------------------
-USERS
-----------------------------------------------------------
+db.exec("PRAGMA journal_mode=WAL");
 
+db.exec("PRAGMA foreign_keys=ON");
+
+db.exec("PRAGMA synchronous=NORMAL");
 CREATE TABLE IF NOT EXISTS users(
 
 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,18 +40,25 @@ password_hash TEXT NOT NULL,
 
 full_name TEXT NOT NULL,
 
-role TEXT NOT NULL DEFAULT 'inspector',
+personnel_no TEXT,
+
+role TEXT NOT NULL,
+
+department TEXT,
+
+mobile TEXT,
+
+email TEXT,
 
 active INTEGER DEFAULT 1,
 
-created_at TEXT DEFAULT(datetime('now'))
+last_login TEXT,
+
+created_at TEXT DEFAULT(datetime('now')),
+
+updated_at TEXT DEFAULT(datetime('now'))
 
 );
-
-----------------------------------------------------------
-PRODUCTS
-----------------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS products(
 
 id TEXT PRIMARY KEY,
@@ -60,6 +71,8 @@ drawing_no TEXT,
 
 material TEXT,
 
+customer TEXT,
+
 logo TEXT,
 
 image TEXT,
@@ -71,14 +84,11 @@ active INTEGER DEFAULT 1,
 created_at TEXT DEFAULT(datetime('now'))
 
 );
-
-----------------------------------------------------------
-PROCESSES
-----------------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS processes(
 
 id TEXT PRIMARY KEY,
+
+code TEXT,
 
 name TEXT NOT NULL,
 
@@ -89,40 +99,175 @@ sort_order INTEGER DEFAULT 0,
 active INTEGER DEFAULT 1
 
 );
-
-----------------------------------------------------------
-PRODUCT PROCESS
-----------------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS product_processes(
 
 id TEXT PRIMARY KEY,
 
-product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+product_id TEXT,
 
-process_id TEXT NOT NULL REFERENCES processes(id),
+process_id TEXT,
 
-sort_order INTEGER DEFAULT 0
+sort_order INTEGER DEFAULT 0,
+
+FOREIGN KEY(product_id)
+REFERENCES products(id)
+ON DELETE CASCADE,
+
+FOREIGN KEY(process_id)
+REFERENCES processes(id)
+ON DELETE CASCADE
 
 );
+CREATE INDEX IF NOT EXISTS idx_products_name
+ON products(name);
 
-----------------------------------------------------------
-CONTROL PLAN
-----------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_process_name
+ON processes(name);
 
+CREATE INDEX IF NOT EXISTS idx_product_process
+ON product_processes(product_id);
+
+db.exec("PRAGMA temp_store=MEMORY");
+
+db.exec("PRAGMA cache_size=10000");
+CREATE TABLE IF NOT EXISTS operators(
+
+id TEXT PRIMARY KEY,
+
+personnel_no TEXT UNIQUE,
+
+full_name TEXT NOT NULL,
+
+department TEXT,
+
+shift TEXT,
+
+active INTEGER DEFAULT 1,
+
+created_at TEXT DEFAULT(datetime('now'))
+
+);
+CREATE TABLE IF NOT EXISTS characteristic_types(
+
+id INTEGER PRIMARY KEY,
+
+name TEXT NOT NULL,
+
+description TEXT
+
+);
+const typeCount=db.prepare(
+"SELECT COUNT(*) cnt FROM characteristic_types"
+).get();
+
+if(typeCount.cnt===0){
+
+const insert=db.prepare(`
+INSERT INTO characteristic_types
+(id,name,description)
+VALUES(?,?,?)
+`);
+
+insert.run(1,"Numeric","اندازه گیری عددی");
+
+insert.run(2,"PassFail","قبول / رد");
+
+insert.run(3,"YesNo","بله / خیر");
+
+insert.run(4,"List","لیست انتخابی");
+
+insert.run(5,"Text","متنی");
+
+insert.run(6,"Date","تاریخ");
+
+insert.run(7,"Time","زمان");
+
+}
+CREATE TABLE IF NOT EXISTS reaction_plans(
+
+id TEXT PRIMARY KEY,
+
+title TEXT NOT NULL,
+
+description TEXT,
+
+active INTEGER DEFAULT 1,
+
+created_at TEXT DEFAULT(datetime('now'))
+
+);
+CREATE TABLE IF NOT EXISTS settings(
+
+key TEXT PRIMARY KEY,
+
+value TEXT,
+
+description TEXT
+
+);
+const settingCount=db.prepare(
+"SELECT COUNT(*) cnt FROM settings"
+).get();
+
+if(settingCount.cnt===0){
+
+const insert=db.prepare(`
+INSERT INTO settings
+(key,value,description)
+VALUES(?,?,?)
+`);
+
+insert.run(
+"company_name",
+"",
+"نام شرکت"
+);
+
+insert.run(
+"default_interval",
+"60",
+"دوره نمونه برداری"
+);
+
+insert.run(
+"default_tolerance",
+"5",
+"تلرانس زمانی"
+);
+
+insert.run(
+"calendar",
+"jalali",
+"نوع تقویم"
+);
+
+insert.run(
+"language",
+"fa",
+"زبان نرم افزار"
+);
+
+}
+CREATE INDEX IF NOT EXISTS idx_operator_name
+ON operators(full_name);
+
+CREATE INDEX IF NOT EXISTS idx_reaction_title
+ON reaction_plans(title);
 CREATE TABLE IF NOT EXISTS plans(
 
 id TEXT PRIMARY KEY,
 
-product_id TEXT NOT NULL REFERENCES products(id),
+product_id TEXT NOT NULL,
 
-process_id TEXT NOT NULL REFERENCES processes(id),
+process_id TEXT NOT NULL,
 
 name TEXT NOT NULL,
 
 code TEXT,
 
 version TEXT DEFAULT '1.0',
+
+revision INTEGER DEFAULT 0,
 
 traceability_code TEXT,
 
@@ -134,82 +279,57 @@ sample_interval INTEGER DEFAULT 60,
 
 time_tolerance INTEGER DEFAULT 5,
 
-created_by INTEGER REFERENCES users(id),
+status TEXT DEFAULT 'ACTIVE',
 
 active INTEGER DEFAULT 1,
 
+created_by INTEGER,
+
 created_at TEXT DEFAULT(datetime('now')),
 
-updated_at TEXT DEFAULT(datetime('now'))
+updated_at TEXT DEFAULT(datetime('now')),
+
+FOREIGN KEY(product_id)
+REFERENCES products(id),
+
+FOREIGN KEY(process_id)
+REFERENCES processes(id),
+
+FOREIGN KEY(created_by)
+REFERENCES users(id)
 
 );
-
-----------------------------------------------------------
-CHARACTERISTIC TYPES
-----------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS characteristic_types(
-
-id INTEGER PRIMARY KEY,
-
-name TEXT NOT NULL
-
-);
-
-INSERT OR IGNORE INTO characteristic_types(id,name)
-VALUES
-(1,'Numeric'),
-(2,'PassFail'),
-(3,'YesNo'),
-(4,'List'),
-(5,'Text'),
-(6,'Date'),
-(7,'Time');
-
-----------------------------------------------------------
-REACTION PLAN
-----------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS reaction_plans(
+CREATE TABLE IF NOT EXISTS plan_versions(
 
 id TEXT PRIMARY KEY,
 
-title TEXT NOT NULL,
+plan_id TEXT NOT NULL,
 
-description TEXT
+version TEXT NOT NULL,
+
+description TEXT,
+
+created_by INTEGER,
+
+created_at TEXT DEFAULT(datetime('now')),
+
+FOREIGN KEY(plan_id)
+REFERENCES plans(id)
+ON DELETE CASCADE,
+
+FOREIGN KEY(created_by)
+REFERENCES users(id)
 
 );
-
-----------------------------------------------------------
-OPERATORS
-----------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS operators(
-
-id TEXT PRIMARY KEY,
-
-personnel_no TEXT,
-
-full_name TEXT NOT NULL,
-
-shift TEXT,
-
-active INTEGER DEFAULT 1
-db.exec(`
-
-----------------------------------------------------------
-CHARACTERISTICS
-----------------------------------------------------------
-
 CREATE TABLE IF NOT EXISTS characteristics(
 
 id TEXT PRIMARY KEY,
 
-plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+plan_id TEXT NOT NULL,
 
 name TEXT NOT NULL,
 
-type_id INTEGER NOT NULL REFERENCES characteristic_types(id),
+type_id INTEGER NOT NULL,
 
 unit TEXT,
 
@@ -225,7 +345,7 @@ method TEXT,
 
 frequency TEXT,
 
-reaction_plan_id TEXT REFERENCES reaction_plans(id),
+reaction_plan_id TEXT,
 
 op_no TEXT,
 
@@ -237,319 +357,41 @@ record_method TEXT,
 
 required INTEGER DEFAULT 1,
 
-sort_order INTEGER DEFAULT 0
+spc INTEGER DEFAULT 0,
+
+msa INTEGER DEFAULT 0,
+
+remark TEXT,
+
+sort_order INTEGER DEFAULT 0,
+
+created_at TEXT DEFAULT(datetime('now')),
+
+FOREIGN KEY(plan_id)
+REFERENCES plans(id)
+ON DELETE CASCADE,
+
+FOREIGN KEY(type_id)
+REFERENCES characteristic_types(id),
+
+FOREIGN KEY(reaction_plan_id)
+REFERENCES reaction_plans(id)
 
 );
-
-----------------------------------------------------------
-INSPECTION HEADER
-----------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS inspection_headers(
-
-id TEXT PRIMARY KEY,
-
-plan_id TEXT NOT NULL REFERENCES plans(id),
-
-product_id TEXT NOT NULL REFERENCES products(id),
-
-process_id TEXT NOT NULL REFERENCES processes(id),
-
-operator_id TEXT REFERENCES operators(id),
-
-inspector_id INTEGER REFERENCES users(id),
-
-inspection_date TEXT,
-
-inspection_time TEXT,
-
-shift TEXT,
-
-traceability_code TEXT,
-
-batch_no TEXT,
-
-serial_no TEXT,
-
-status TEXT DEFAULT 'OPEN',
-
-note TEXT,
-
-created_at TEXT DEFAULT(datetime('now'))
-
-);
-
-----------------------------------------------------------
-INSPECTION DETAILS
-----------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS inspection_details(
-
-id TEXT PRIMARY KEY,
-
-header_id TEXT NOT NULL REFERENCES inspection_headers(id) ON DELETE CASCADE,
-
-characteristic_id TEXT NOT NULL REFERENCES characteristics(id),
-
-numeric_value REAL,
-
-text_value TEXT,
-
-status TEXT,
-
-reaction_plan_id TEXT REFERENCES reaction_plans(id),
-
-note TEXT
-
-);
-
-----------------------------------------------------------
-AUDIT LOG
-----------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS audit_logs(
-
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-table_name TEXT,
-
-record_id TEXT,
-
-action TEXT,
-
-old_value TEXT,
-
-new_value TEXT,
-
-user_id INTEGER REFERENCES users(id),
-
-created_at TEXT DEFAULT(datetime('now'))
-
-);
-
-----------------------------------------------------------
-INDEXES
-----------------------------------------------------------
-
-CREATE INDEX IF NOT EXISTS idx_product_name
-ON products(name);
-
-CREATE INDEX IF NOT EXISTS idx_process_name
-ON processes(name);
-
 CREATE INDEX IF NOT EXISTS idx_plan_product
 ON plans(product_id);
 
 CREATE INDEX IF NOT EXISTS idx_plan_process
 ON plans(process_id);
 
-CREATE INDEX IF NOT EXISTS idx_char_plan
+CREATE INDEX IF NOT EXISTS idx_plan_status
+ON plans(status);
+
+CREATE INDEX IF NOT EXISTS idx_characteristics_plan
 ON characteristics(plan_id);
 
-CREATE INDEX IF NOT EXISTS idx_header_plan
-ON inspection_headers(plan_id);
-
-CREATE INDEX IF NOT EXISTS idx_header_date
-ON inspection_headers(inspection_date);
-
-CREATE INDEX IF NOT EXISTS idx_detail_header
-ON inspection_details(header_id);
-
-CREATE INDEX IF NOT EXISTS idx_detail_char
-ON inspection_details(characteristic_id);
-
-`);
-//------------------------------------------------------
-// MIGRATIONS
-//------------------------------------------------------
-
-function columnExists(table, column) {
-
-    const cols = db.prepare(`PRAGMA table_info(${table})`).all();
-
-    return cols.some(c => c.name === column);
-
-}
-
-// plans
-
-if (!columnExists("plans","version"))
-    db.exec("ALTER TABLE plans ADD COLUMN version TEXT DEFAULT '1.0'");
-
-if (!columnExists("plans","traceability_code"))
-    db.exec("ALTER TABLE plans ADD COLUMN traceability_code TEXT");
-
-if (!columnExists("plans","sample_interval"))
-    db.exec("ALTER TABLE plans ADD COLUMN sample_interval INTEGER DEFAULT 60");
-
-if (!columnExists("plans","time_tolerance"))
-    db.exec("ALTER TABLE plans ADD COLUMN time_tolerance INTEGER DEFAULT 5");
-
-// characteristics
-
-if (!columnExists("characteristics","type_id"))
-    db.exec("ALTER TABLE characteristics ADD COLUMN type_id INTEGER DEFAULT 1");
-
-if (!columnExists("characteristics","list_values"))
-    db.exec("ALTER TABLE characteristics ADD COLUMN list_values TEXT");
-
-if (!columnExists("characteristics","reaction_plan_id"))
-    db.exec("ALTER TABLE characteristics ADD COLUMN reaction_plan_id TEXT");
-
-if (!columnExists("characteristics","required"))
-    db.exec("ALTER TABLE characteristics ADD COLUMN required INTEGER DEFAULT 1");
-
-
-//------------------------------------------------------
-// TRIGGERS
-//------------------------------------------------------
-
-db.exec(`
-
-CREATE TRIGGER IF NOT EXISTS trg_plan_updated
-
-AFTER UPDATE ON plans
-
-BEGIN
-
-UPDATE plans
-
-SET updated_at=datetime('now')
-
-WHERE id=NEW.id;
-
-END;
-
-`);
-
-
-//------------------------------------------------------
-// DEFAULT REACTION PLANS
-//------------------------------------------------------
-
-db.exec(`
-
-INSERT OR IGNORE INTO reaction_plans(id,title)
-
-VALUES
-
-('RP001','ادامه تولید'),
-
-('RP002','توقف تولید'),
-
-('RP003','جداسازی قطعات'),
-
-('RP004','اطلاع به سرپرست'),
-
-('RP005','بازرسی مجدد'),
-
-('RP006','اصلاح فرآیند'),
-
-('RP007','تعویض ابزار');
-
-`);
-
-
-//------------------------------------------------------
-// DEFAULT ADMIN
-//------------------------------------------------------
-
-const admin=db.prepare("SELECT id FROM users WHERE username='admin'").get();
-
-if(!admin){
-
-db.prepare(`
-
-INSERT INTO users
-
-(username,password_hash,full_name,role)
-
-VALUES
-
-(?,?,?,?)
-
-`).run(
-
-"admin",
-
-"$2b$10$replace_with_hash",
-
-"System Administrator",
-
-"admin"
-
-);
-
-}
-
-
-//------------------------------------------------------
-// VERSION HELPER
-//------------------------------------------------------
-
-function nextVersion(version){
-
-    if(!version) return "1.0";
-
-    const p=version.split(".");
-
-    let major=parseInt(p[0]);
-
-    let minor=parseInt(p[1]);
-
-    minor++;
-
-    if(minor>=10){
-
-        major++;
-
-        minor=0;
-
-    }
-
-    return major+"."+minor;
-
-}
-
-
-//------------------------------------------------------
-// TRANSACTION
-//------------------------------------------------------
-
-function withTransaction(fn){
-
-    db.exec("BEGIN");
-
-    try{
-
-        const result=fn();
-
-        db.exec("COMMIT");
-
-        return result;
-
-    }
-
-    catch(err){
-
-        db.exec("ROLLBACK");
-
-        throw err;
-
-    }
-
-}
-
-
-//------------------------------------------------------
-// EXPORTS
-//------------------------------------------------------
-
-module.exports=db;
-
-module.exports.withTransaction=withTransaction;
-
-module.exports.nextVersion=nextVersion;
-);
-
-`);
+CREATE INDEX IF NOT EXISTS idx_characteristics_sort
+ON characteristics(sort_order);
+
+CREATE INDEX IF NOT EXISTS idx_characteristics_type
+ON characteristics(type_id);
