@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سامانه طرح کنترل محصول</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#152238; --navy-2:#1F3050; --steel:#5B6B84; --steel-light:#8B98AC;
+    --paper:#F5F6F8; --paper-2:#FFFFFF; --line:#DCE1E8;
+    --amber:#C97A2B; --amber-bg:#FBEFE1;
+    --green:#2E7D5B; --green-bg:#E6F3ED;
+    --red:#B3432E; --red-bg:#FBEAE6;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--navy);font-family:'Vazirmatn',sans-serif;}
+  .mono, input[type=number]{font-family:'IBM Plex Mono','Vazirmatn',monospace;}
+  .app{max-width:1100px;margin:0 auto;padding:28px 20px 80px;}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:3px solid var(--navy);padding-bottom:16px;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
+  header.top .brand{display:flex;align-items:center;gap:12px;}
+  .badge{width:44px;height:44px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;}
+  header.top h1{font-size:20px;font-weight:800;margin:0;}
+  header.top .sub{font-size:12.5px;color:var(--steel);margin-top:2px;}
+  .who{font-size:12px;color:var(--steel);display:flex;align-items:center;gap:10px;}
+  .who button{background:none;border:1px solid var(--line);padding:6px 12px;font-family:inherit;cursor:pointer;color:var(--navy);font-size:12px;}
+
+  nav.tabs{display:flex;gap:2px;margin-bottom:22px;background:var(--paper-2);border:1px solid var(--line);padding:4px;width:fit-content;flex-wrap:wrap;}
+  nav.tabs button{border:none;background:transparent;padding:10px 18px;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--steel);cursor:pointer;}
+  nav.tabs button.active{background:var(--navy);color:#fff;}
+  nav.tabs button:not(.active):hover{background:var(--paper);color:var(--navy);}
+
+  .panel{display:none;} .panel.active{display:block;animation:fade .2s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  .card{background:var(--paper-2);border:1px solid var(--line);padding:22px;margin-bottom:18px;}
+  .card h2{font-size:15px;font-weight:700;margin:0 0 4px;}
+  .card .hint{font-size:12px;color:var(--steel);margin:0 0 18px;}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .grid.g2{grid-template-columns:repeat(2,1fr);}
+  @media(max-width:720px){.grid,.grid.g2{grid-template-columns:1fr;}}
+
+  label{display:block;font-size:11.5px;font-weight:600;color:var(--steel);margin-bottom:5px;}
+  input, select, textarea{width:100%;border:1px solid var(--line);background:var(--paper);padding:9px 10px;font-family:inherit;font-size:13.5px;color:var(--navy);}
+  input:focus, select:focus, textarea:focus{outline:none;border-color:var(--navy);background:#fff;}
+  textarea{resize:vertical;min-height:60px;}
+
+  .btn{border:none;padding:10px 20px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:opacity .15s;}
+  .btn:hover{opacity:0.88;}
+  .btn-primary{background:var(--navy);color:#fff;}
+  .btn-ghost{background:transparent;color:var(--navy);border:1px solid var(--navy);}
+  .btn-danger{background:transparent;color:var(--red);border:1px solid var(--red);padding:6px 10px;font-size:12px;}
+  .btn-sm{padding:6px 12px;font-size:12px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{text-align:right;font-size:11px;font-weight:700;color:var(--steel);text-transform:uppercase;padding:10px 8px;border-bottom:2px solid var(--navy);white-space:nowrap;}
+  tbody td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tbody tr:hover{background:var(--paper);}
+
+  .pill{display:inline-block;padding:3px 10px;font-size:11px;font-weight:700;border-radius:2px;}
+  .pill.ok{background:var(--green-bg);color:var(--green);}
+  .pill.fail{background:var(--red-bg);color:var(--red);}
+  .pill.na{background:var(--paper);color:var(--steel);}
+  .pill.role{background:var(--amber-bg);color:var(--amber);}
+
+  .empty{text-align:center;padding:50px 20px;color:var(--steel-light);font-size:13px;}
+  .empty .big{font-size:32px;margin-bottom:8px;}
+
+  .row-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+  .char-list{margin-top:14px;}
+  .char-item{border:1px solid var(--line);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;background:var(--paper);}
+  .char-item .idx{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);font-weight:700;margin-left:10px;}
+  .char-item .body{flex:1;display:flex;gap:20px;flex-wrap:wrap;}
+  .char-item .name{font-weight:700;font-size:13.5px;}
+  .char-item .detail{font-size:11.5px;color:var(--steel);}
+  .char-item .spec{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--navy-2);}
+
+  .status-line{font-size:12px;color:var(--steel);margin-top:10px;}
+  .status-line.saved{color:var(--green);}
+  .status-line.warn{color:var(--red);}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;padding:12px 22px;font-size:13px;font-weight:600;opacity:0;transition:all .25s;pointer-events:none;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .spec-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  @media(max-width:600px){.spec-cols{grid-template-columns:1fr;}}
+  .footnote{font-size:11px;color:var(--steel-light);margin-top:24px;text-align:center;}
+
+  /* login screen */
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy);}
+  .login-box{background:#fff;padding:36px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .login-box h1{font-size:17px;margin:0 0 4px;}
+  .login-box .sub{font-size:12px;color:var(--steel);margin-bottom:22px;}
+  .login-box .field{margin-bottom:14px;}
+  .login-box .btn{width:100%;padding:12px;margin-top:6px;}
+  .login-error{color:var(--red);font-size:12px;margin-top:10px;min-height:16px;}
+  #mainApp{display:none;}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>سامانه طرح کنترل محصول</h1>
+    <div class="sub">برای ادامه وارد حساب کاربری خود شوید</div>
+    <div class="field"><label>نام کاربری</label><input id="login_user" autocomplete="username"></div>
+    <div class="field"><label>رمز عبور</label><input id="login_pass" type="password" autocomplete="current-password"></div>
+    <button class="btn btn-primary" onclick="doLogin()">ورود</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div id="mainApp">
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <div class="badge">QC</div>
+      <div>
+        <h1>سامانه طرح کنترل محصول</h1>
+        <div class="sub">تعریف مشخصات کنترلی و ثبت داده‌های بازرسی</div>
+      </div>
+    </div>
+    <div class="who">
+      <span id="whoLabel"></span>
+      <button onclick="logout()">خروج</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabsNav">
+    <button class="tab-btn active" data-tab="plan">تعریف طرح کنترل</button>
+    <button class="tab-btn" data-tab="entry">فرم ورود اطلاعات</button>
+    <button class="tab-btn" data-tab="log">گزارش داده‌ها</button>
+    <button class="tab-btn" data-tab="users" id="usersTabBtn" style="display:none;">مدیریت کاربران</button>
+  </nav>
+
+  <!-- TAB 1: PLAN -->
+  <div class="panel active" id="panel-plan">
+    <div class="card">
+      <h2>مشخصات محصول</h2>
+      <p class="hint">اطلاعات کلی محصول یا قطعه‌ای که طرح کنترل برای آن تعریف می‌شود</p>
+      <div class="grid">
+        <div class="field"><label>نام محصول</label><input id="p_name" placeholder="مثال: بدنه پمپ فشار"></div>
+        <div class="field"><label>کد / شماره فنی قطعه</label><input id="p_code" class="mono" placeholder="مثال: PT-4021-A"></div>
+        <div class="field"><label>شماره ویرایش</label><input id="p_rev" class="mono" placeholder="مثال: Rev.03"></div>
+        <div class="field"><label>مرحله فرآیند</label><input id="p_process" placeholder="مثال: ماشین‌کاری CNC"></div>
+        <div class="field"><label>تهیه‌کننده</label><input id="p_author" placeholder="نام مسئول کیفیت"></div>
+        <div class="field"><label>تاریخ تهیه</label><input id="p_date" type="date"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>مشخصه‌های کنترلی (Characteristics)</h2>
+      <p class="hint">هر پارامتری که باید در حین تولید بازرسی یا اندازه‌گیری شود را اضافه کنید</p>
+      <div class="grid">
+        <div class="field"><label>نام مشخصه</label><input id="c_name" placeholder="مثال: قطر داخلی سوراخ"></div>
+        <div class="field"><label>واحد اندازه‌گیری</label><input id="c_unit" placeholder="mm / kg / °C ..."></div>
+        <div class="field"><label>روش کنترل</label><input id="c_method" placeholder="مثال: کولیس دیجیتال"></div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="grid">
+        <div class="field"><label>شماره عملیات</label><input id="c_opno" class="mono" placeholder="مثال: OP1"></div>
+        <div class="field">
+          <label>درجه اهمیت</label>
+          <select id="c_importance">
+            <option value="">—</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+          </select>
+        </div>
+        <div class="field"><label>مسئول انجام</label><input id="c_responsible" placeholder="مثال: بازرس QC"></div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="spec-cols">
+        <div class="field"><label>حد پایین (LSL)</label><input id="c_lsl" type="number" step="any" class="mono"></div>
+        <div class="field"><label>مقدار هدف (Target)</label><input id="c_target" type="number" step="any" class="mono"></div>
+        <div class="field"><label>حد بالا (USL)</label><input id="c_usl" type="number" step="any" class="mono"></div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="grid g2">
+        <div class="field"><label>حجم نمونه و دفعه بازرسی</label><input id="c_freq" placeholder="مثال: هر ۵۰ قطعه یک نمونه"></div>
+        <div class="field"><label>روش ثبت و کنترل</label><input id="c_record" placeholder="مثال: فرم ثبت حین تولید DF80607"></div>
+      </div>
+      <div style="height:12px"></div>
+      <div class="field"><label>برنامه واکنش در صورت خروج از حد مجاز</label><input id="c_reaction" placeholder="مثال: توقف خط و اطلاع به سرپرست کیفیت"></div>
+      <div class="row-actions"><button class="btn btn-primary btn-sm" onclick="addCharacteristic()">+ افزودن مشخصه</button></div>
+      <div class="char-list" id="charList"></div>
+    </div>
+
+    <div class="row-actions">
+      <button class="btn btn-ghost" onclick="newPlan()">طرح جدید</button>
+      <button class="btn btn-primary" onclick="savePlan()">ذخیره طرح کنترل</button>
+    </div>
+    <div class="status-line" id="planStatus"></div>
+
+    <div class="card" style="margin-top:22px;">
+      <h2>طرح‌های ذخیره‌شده</h2>
+      <p class="hint">طرح‌های قبلی را انتخاب، ویرایش یا حذف کنید</p>
+      <div id="planListWrap"></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: ENTRY -->
+  <div class="panel" id="panel-entry">
+    <div class="card">
+      <h2>ثبت داده بازرسی</h2>
+      <p class="hint">یک طرح کنترل و مشخصه مورد نظر را انتخاب و مقدار اندازه‌گیری‌شده را ثبت کنید</p>
+      <div class="grid">
+        <div class="field"><label>محصول / طرح کنترل</label><select id="entryProduct" onchange="onEntryProductChange()"></select></div>
+        <div class="field"><label>مشخصه کنترلی</label><select id="entryChar" onchange="onEntryCharChange()"></select></div>
+        <div class="field"><label>مقدار اندازه‌گیری‌شده</label><input id="e_value" type="number" step="any" class="mono"></div>
+        <div class="field"><label>تاریخ</label><input id="e_date" type="date"></div>
+        <div class="field"><label>شیفت</label><select id="e_shift"><option>صبح</option><option>عصر</option><option>شب</option></select></div>
+        <div class="field"><label>اپراتور / بازرس</label><input id="e_operator" placeholder="نام"></div>
+      </div>
+      <div class="field" style="margin-top:14px;"><label>یادداشت (اختیاری)</label><textarea id="e_note" placeholder="توضیح تکمیلی در صورت نیاز..."></textarea></div>
+      <div id="specPreview" class="status-line"></div>
+      <div class="row-actions"><button class="btn btn-primary" onclick="submitEntry()">ثبت داده</button></div>
+      <div class="status-line" id="entryStatus"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: LOG -->
+  <div class="panel" id="panel-log">
+    <div class="card">
+      <h2>سوابق داده‌های ثبت‌شده</h2>
+      <p class="hint">تمام مقادیر ثبت‌شده به همراه وضعیت انطباق با مشخصات</p>
+      <div class="grid g2" style="margin-bottom:16px;">
+        <div class="field"><label>فیلتر بر اساس محصول</label><select id="logFilterProduct" onchange="renderLog()"></select></div>
+        <div class="field"><label>&nbsp;</label><button class="btn btn-ghost btn-sm" onclick="exportCsv()">خروجی CSV</button></div>
+      </div>
+      <div id="logWrap"></div>
+    </div>
+  </div>
+
+  <!-- TAB 4: USERS (admin only) -->
+  <div class="panel" id="panel-users">
+    <div class="card">
+      <h2>افزودن کاربر</h2>
+      <p class="hint">اعضای تیم کیفیت را برای ورود به سامانه تعریف کنید</p>
+      <div class="grid">
+        <div class="field"><label>نام کامل</label><input id="u_name" placeholder="مثال: زهرا افراسیاب"></div>
+        <div class="field"><label>نام کاربری</label><input id="u_user" class="mono" placeholder="zahra.a"></div>
+        <div class="field"><label>رمز عبور</label><input id="u_pass" type="password"></div>
+        <div class="field">
+          <label>نقش</label>
+          <select id="u_role">
+            <option value="inspector">بازرس (فقط ثبت داده)</option>
+            <option value="qc_manager">سرپرست کیفیت (تعریف طرح + ثبت)</option>
+            <option value="admin">مدیر سیستم (دسترسی کامل)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row-actions"><button class="btn btn-primary btn-sm" onclick="addUser()">+ افزودن کاربر</button></div>
+      <div class="status-line" id="userStatus"></div>
+    </div>
+    <div class="card">
+      <h2>کاربران سامانه</h2>
+      <div id="usersWrap"></div>
+    </div>
+  </div>
+
+  <div class="footnote">داده‌ها روی سرور داخلی شرکت ذخیره می‌شوند</div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/api';
+let TOKEN = localStorage.getItem('qc_token') || null;
+let ME = null;
+let plans = [];
+let currentPlanId = null;
+let draftChars = [];
+
+const toast = (msg) => {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+};
+const escapeHtml = (s) => (s||'').toString().replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+async function api(path, opts={}){
+  const headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+  if(TOKEN) headers['Authorization'] = 'Bearer '+TOKEN;
+  const res = await fetch(API+path, Object.assign({}, opts, {headers}));
+  if(res.status===401){ logout(); throw new Error('نشست منقضی شده'); }
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error || 'خطا در ارتباط با سرور');
+  return data;
+}
+
+// ---------- Auth ----------
+async function doLogin(){
+  const username = document.getElementById('login_user').value.trim();
+  const password = document.getElementById('login_pass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  if(!username || !password){ errEl.textContent = 'نام کاربری و رمز عبور را وارد کنید'; return; }
+  try{
+    const res = await fetch(API+'/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({username, password})
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'خطا در ورود');
+    TOKEN = data.token;
+    ME = data.user;
+    localStorage.setItem('qc_token', TOKEN);
+    enterApp();
+  }catch(e){
+    errEl.textContent = e.message;
+  }
+}
+function logout(){
+  TOKEN = null; ME = null;
+  localStorage.removeItem('qc_token');
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+async function tryAutoLogin(){
+  if(!TOKEN) return;
+  try{
+    const data = await api('/auth/me');
+    ME = data.user;
+    enterApp();
+  }catch(e){ logout(); }
+}
+function enterApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+  document.getElementById('whoLabel').textContent = `${ME.full_name} (${roleLabel(ME.role)})`;
+  document.getElementById('usersTabBtn').style.display = (ME.role==='admin') ? 'inline-block' : 'none';
+  document.getElementById('p_date').valueAsDate = new Date();
+  document.getElementById('e_date').valueAsDate = new Date();
+  init();
+}
+function roleLabel(r){
+  return r==='admin' ? 'مدیر سیستم' : r==='qc_manager' ? 'سرپرست کیفیت' : 'بازرس';
+}
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='entry') refreshEntryProductOptions();
+    if(btn.dataset.tab==='log') { refreshLogFilterOptions(); renderLog(); }
+    if(btn.dataset.tab==='users') renderUsers();
+  });
+});
+
+// ---------- Plans data ----------
+async function loadPlans(){
+  try{ plans = await api('/plans'); }catch(e){ plans = []; toast(e.message); }
+  renderPlanList();
+}
+
+// ---------- Characteristic builder ----------
+function addCharacteristic(){
+  const name = document.getElementById('c_name').value.trim();
+  if(!name){ toast('نام مشخصه را وارد کنید'); return; }
+  const item = {
+    id: 'c_'+Date.now(),
+    name,
+    unit: document.getElementById('c_unit').value.trim(),
+    method: document.getElementById('c_method').value.trim(),
+    opNo: document.getElementById('c_opno').value.trim(),
+    importance: document.getElementById('c_importance').value,
+    responsible: document.getElementById('c_responsible').value.trim(),
+    lsl: document.getElementById('c_lsl').value,
+    target: document.getElementById('c_target').value,
+    usl: document.getElementById('c_usl').value,
+    freq: document.getElementById('c_freq').value.trim(),
+    recordMethod: document.getElementById('c_record').value.trim(),
+    reaction: document.getElementById('c_reaction').value.trim(),
+  };
+  draftChars.push(item);
+  ['c_name','c_unit','c_method','c_opno','c_importance','c_responsible','c_lsl','c_target','c_usl','c_freq','c_record','c_reaction'].forEach(id=>document.getElementById(id).value='');
+  renderCharList();
+}
+function removeCharacteristic(id){
+  draftChars = draftChars.filter(c=>c.id!==id);
+  renderCharList();
+}
+function renderCharList(){
+  const wrap = document.getElementById('charList');
+  if(draftChars.length===0){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = draftChars.map((c,i)=>`
+    <div class="char-item">
+      <div class="body">
+        <span class="idx">${String(i+1).padStart(2,'0')}</span>
+        <div>
+          <div class="name">${c.opNo?`<span class="pill role">${escapeHtml(c.opNo)}</span> `:''}${c.importance?`<span class="pill ${c.importance==='A'?'fail':'na'}">${c.importance}</span> `:''}${escapeHtml(c.name)}</div>
+          <div class="detail">${escapeHtml(c.method||'—')} · ${escapeHtml(c.freq||'—')} ${c.responsible?'· مسئول: '+escapeHtml(c.responsible):''}</div>
+        </div>
+        <div class="spec">LSL ${c.lsl||'—'} / T ${c.target||'—'} / USL ${c.usl||'—'} ${escapeHtml(c.unit||'')}</div>
+      </div>
+      <button class="btn-danger" onclick="removeCharacteristic('${c.id}')">حذف</button>
+    </div>
+  `).join('');
+}
+
+// ---------- Plan CRUD ----------
+function newPlan(){
+  currentPlanId = null;
+  draftChars = [];
+  ['p_name','p_code','p_rev','p_process','p_author'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p_date').valueAsDate = new Date();
+  renderCharList();
+  document.getElementById('planStatus').textContent = '';
+  document.getElementById('planStatus').className='status-line';
+  toast('فرم پاک شد — طرح جدید');
+}
+
+async function savePlan(){
+  const name = document.getElementById('p_name').value.trim();
+  if(!name){ toast('نام محصول را وارد کنید'); return; }
+  if(draftChars.length===0){ toast('حداقل یک مشخصه کنترلی اضافه کنید'); return; }
+
+  const plan = {
+    id: currentPlanId || undefined,
+    name,
+    code: document.getElementById('p_code').value.trim(),
+    rev: document.getElementById('p_rev').value.trim(),
+    process: document.getElementById('p_process').value.trim(),
+    author: document.getElementById('p_author').value.trim(),
+    date: document.getElementById('p_date').value,
+    characteristics: draftChars,
+  };
+
+  try{
+    const res = await api('/plans', { method:'POST', body: JSON.stringify(plan) });
+    currentPlanId = res.id;
+    await loadPlans();
+    const st = document.getElementById('planStatus');
+    st.textContent = 'ذخیره شد ✓ — ' + new Date().toLocaleTimeString('fa-IR');
+    st.className = 'status-line saved';
+    toast('طرح کنترل ذخیره شد');
+  }catch(e){ toast(e.message); }
+}
+
+function editPlan(id){
+  const plan = plans.find(p=>p.id===id);
+  if(!plan) return;
+  currentPlanId = plan.id;
+  document.getElementById('p_name').value = plan.name;
+  document.getElementById('p_code').value = plan.code||'';
+  document.getElementById('p_rev').value = plan.rev||'';
+  document.getElementById('p_process').value = plan.process||'';
+  document.getElementById('p_author').value = plan.author||'';
+  document.getElementById('p_date').value = plan.plan_date||'';
+  draftChars = (plan.characteristics||[]).map(c=>({
+    id: c.id, name: c.name, unit: c.unit, method: c.method,
+    opNo: c.op_no || '', importance: c.importance || '', responsible: c.responsible || '',
+    recordMethod: c.record_method || '',
+    lsl: c.lsl ?? '', target: c.target ?? '', usl: c.usl ?? '',
+    freq: c.freq, reaction: c.reaction
+  }));
+  renderCharList();
+  document.querySelector('.tab-btn[data-tab="plan"]').click();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function deletePlan(id){
+  try{
+    await api('/plans/'+id, { method:'DELETE' });
+    await loadPlans();
+    toast('طرح حذف شد');
+  }catch(e){ toast(e.message); }
+}
+
+function canEditPlans(){ return ME && (ME.role==='admin' || ME.role==='qc_manager'); }
+
+function renderPlanList(){
+  const wrap = document.getElementById('planListWrap');
+  if(plans.length===0){
+    wrap.innerHTML = `<div class="empty"><div class="big">—</div>هنوز طرح کنترلی ثبت نشده است</div>`;
+    return;
+  }
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>محصول</th><th>کد</th><th>ویرایش</th><th>تعداد مشخصه</th><th>تاریخ</th><th></th></tr></thead>
+      <tbody>
+        ${plans.map(p=>`
+          <tr>
+            <td><strong>${escapeHtml(p.name)}</strong></td>
+            <td class="mono">${escapeHtml(p.code||'—')}</td>
+            <td class="mono">${escapeHtml(p.rev||'—')}</td>
+            <td>${(p.characteristics||[]).length}</td>
+            <td class="mono">${escapeHtml(p.plan_date||'—')}</td>
+            <td style="white-space:nowrap;">
+              ${canEditPlans() ? `<button class="btn btn-ghost btn-sm" onclick="editPlan('${p.id}')">ویرایش</button>
+              <button class="btn-danger" onclick="deletePlan('${p.id}')">حذف</button>` : ''}
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ---------- Entry tab ----------
+function refreshEntryProductOptions(){
+  const sel = document.getElementById('entryProduct');
+  sel.innerHTML = '<option value="">— انتخاب کنید —</option>' +
+    plans.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}${p.code?' ('+escapeHtml(p.code)+')':''}</option>`).join('');
+}
+function onEntryProductChange(){
+  const planId = document.getElementById('entryProduct').value;
+  const charSel = document.getElementById('entryChar');
+  const plan = plans.find(p=>p.id===planId);
+  if(!plan){ charSel.innerHTML=''; document.getElementById('specPreview').textContent=''; return; }
+  charSel.innerHTML = plan.characteristics.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  onEntryCharChange();
+}
+function onEntryCharChange(){
+  const planId = document.getElementById('entryProduct').value;
+  const charId = document.getElementById('entryChar').value;
+  const plan = plans.find(p=>p.id===planId);
+  const c = plan ? plan.characteristics.find(x=>x.id===charId) : null;
+  const preview = document.getElementById('specPreview');
+  if(!c){ preview.textContent=''; return; }
+  const extra = [
+    c.op_no ? 'عملیات: '+c.op_no : null,
+    c.importance ? 'اهمیت: '+c.importance : null,
+    c.responsible ? 'مسئول: '+c.responsible : null,
+  ].filter(Boolean).join(' — ');
+  preview.textContent = `محدوده مجاز: ${c.lsl??'—'} تا ${c.usl??'—'} ${c.unit||''} (هدف: ${c.target??'—'}) — روش: ${c.method||'—'}` + (extra ? ' — '+extra : '');
+}
+
+async function submitEntry(){
+  const planId = document.getElementById('entryProduct').value;
+  const charId = document.getElementById('entryChar').value;
+  const value = document.getElementById('e_value').value;
+  if(!planId || !charId){ toast('محصول و مشخصه را انتخاب کنید'); return; }
+  if(value===''){ toast('مقدار اندازه‌گیری‌شده را وارد کنید'); return; }
+
+  const plan = plans.find(p=>p.id===planId);
+  const c = plan.characteristics.find(x=>x.id===charId);
+
+  try{
+    const res = await api('/entries', { method:'POST', body: JSON.stringify({
+      planId, charId, value,
+      date: document.getElementById('e_date').value,
+      shift: document.getElementById('e_shift').value,
+      operator: document.getElementById('e_operator').value.trim(),
+      note: document.getElementById('e_note').value.trim(),
+    })});
+
+    document.getElementById('e_value').value='';
+    document.getElementById('e_operator').value='';
+    document.getElementById('e_note').value='';
+
+    const st = document.getElementById('entryStatus');
+    if(res.status==='fail'){
+      st.textContent = '⚠ مقدار خارج از محدوده مجاز است — ' + (res.reaction ? 'برنامه واکنش: '+res.reaction : 'به سرپرست اطلاع دهید');
+      st.className = 'status-line warn';
+    } else {
+      st.textContent = 'داده با موفقیت ثبت شد ✓';
+      st.className = 'status-line saved';
+    }
+    toast(res.status==='fail' ? 'خارج از محدوده مجاز!' : 'داده ثبت شد');
+  }catch(e){ toast(e.message); }
+}
+
+// ---------- Log tab ----------
+function refreshLogFilterOptions(){
+  const sel = document.getElementById('logFilterProduct');
+  sel.innerHTML = '<option value="">همه محصولات</option>' +
+    plans.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+}
+async function renderLog(){
+  const wrap = document.getElementById('logWrap');
+  const filter = document.getElementById('logFilterProduct').value;
+  let entries = [];
+  try{ entries = await api('/entries' + (filter ? '?planId='+encodeURIComponent(filter) : '')); }
+  catch(e){ toast(e.message); }
+
+  if(entries.length===0){
+    wrap.innerHTML = `<div class="empty"><div class="big">—</div>داده‌ای برای نمایش وجود ندارد</div>`;
+    return;
+  }
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>تاریخ</th><th>محصول</th><th>مشخصه</th><th>مقدار</th><th>محدوده</th><th>وضعیت</th><th>شیفت</th><th>اپراتور</th></tr></thead>
+      <tbody>
+        ${entries.map(e=>`
+          <tr>
+            <td class="mono">${escapeHtml(e.entry_date||'—')}</td>
+            <td>${escapeHtml(e.plan_name)}</td>
+            <td>${escapeHtml(e.char_name)}</td>
+            <td class="mono">${e.value} ${escapeHtml(e.unit||'')}</td>
+            <td class="mono">${e.lsl??'—'} – ${e.usl??'—'}</td>
+            <td>${e.status==='ok'?'<span class="pill ok">منطبق</span>':e.status==='fail'?'<span class="pill fail">خارج از حد</span>':'<span class="pill na">—</span>'}</td>
+            <td>${escapeHtml(e.shift||'—')}</td>
+            <td>${escapeHtml(e.operator||'—')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function exportCsv(){
+  const filter = document.getElementById('logFilterProduct').value;
+  let entries = [];
+  try{ entries = await api('/entries' + (filter ? '?planId='+encodeURIComponent(filter) : '')); }
+  catch(e){ toast(e.message); return; }
+  if(entries.length===0){ toast('داده‌ای برای خروجی وجود ندارد'); return; }
+  const header = ['تاریخ','محصول','مشخصه','مقدار','واحد','LSL','USL','وضعیت','شیفت','اپراتور','یادداشت'];
+  const rows = entries.map(e=>[e.entry_date,e.plan_name,e.char_name,e.value,e.unit,e.lsl,e.usl,e.status,e.shift,e.operator,e.note]);
+  const csv = [header, ...rows].map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'inspection-log.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- Users tab ----------
+async function addUser(){
+  const full_name = document.getElementById('u_name').value.trim();
+  const username = document.getElementById('u_user').value.trim();
+  const password = document.getElementById('u_pass').value;
+  const role = document.getElementById('u_role').value;
+  if(!full_name || !username || !password){ toast('همه فیلدها را پر کنید'); return; }
+  try{
+    await api('/users', { method:'POST', body: JSON.stringify({ full_name, username, password, role }) });
+    ['u_name','u_user','u_pass'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('userStatus').textContent = 'کاربر با موفقیت اضافه شد ✓';
+    document.getElementById('userStatus').className = 'status-line saved';
+    renderUsers();
+    toast('کاربر اضافه شد');
+  }catch(e){ toast(e.message); }
+}
+async function deleteUser(id){
+  try{ await api('/users/'+id, { method:'DELETE' }); renderUsers(); toast('کاربر حذف شد'); }
+  catch(e){ toast(e.message); }
+}
+async function renderUsers(){
+  const wrap = document.getElementById('usersWrap');
+  let users = [];
+  try{ users = await api('/users'); }catch(e){ toast(e.message); return; }
+  if(users.length===0){ wrap.innerHTML = `<div class="empty">کاربری ثبت نشده</div>`; return; }
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>نام</th><th>نام کاربری</th><th>نقش</th><th></th></tr></thead>
+      <tbody>
+        ${users.map(u=>`
+          <tr>
+            <td>${escapeHtml(u.full_name)}</td>
+            <td class="mono">${escapeHtml(u.username)}</td>
+            <td><span class="pill role">${roleLabel(u.role)}</span></td>
+            <td>${u.id!==ME.id ? `<button class="btn-danger" onclick="deleteUser(${u.id})">حذف</button>` : ''}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ---------- init ----------
+async function init(){
+  await loadPlans();
+  renderCharList();
+  refreshEntryProductOptions();
+  refreshLogFilterOptions();
+}
+
+document.getElementById('login_pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+tryAutoLogin();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  qc-app:
+    build: .
+    container_name: qc-control-plan
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - qc-data:/app/data
+
+volumes:
+  qc-data:
